@@ -1,7 +1,7 @@
 import { ZodTypeAny , z } from "zod";
 
-export class Validation {
-    static validate<T extends ZodTypeAny>(
+export class ValidationService {
+    validate<T extends ZodTypeAny>(
         schema: T,
         data: unknown
     ): z.infer<T> {

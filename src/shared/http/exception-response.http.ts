@@ -1,4 +1,4 @@
-export class ResponseError extends Error {
+export class HttpException extends Error {
     public status: number
 
     constructor(status: number, message: string) {
@@ -7,67 +7,68 @@ export class ResponseError extends Error {
     }
 }
 
-export class BadRequestError extends ResponseError {
+
+export class BadRequestException extends HttpException {
     constructor(message: string) {
         super(400, message)
     }
 }
 
-export class UnauthorizedError extends ResponseError {
+export class UnauthorizedException extends HttpException {
     constructor(message: string) {
         super(401, message)
     }
 }
 
-export class ForbiddenError extends ResponseError {
+export class ForbiddenException extends HttpException {
     constructor(message: string) {
         super(403, message)
     }
 }
 
-export class NotFoundError extends ResponseError {
+export class Exception  extends HttpException {
     constructor(message: string) {
         super(404, message)
     }
 }
 
-export class ConflictError extends ResponseError {
+export class ConflictException  extends HttpException {
     constructor(message: string) {
         super(409, message)
     }
 }
 
-export class GoneError extends ResponseError {
+export class GoneException  extends HttpException {
     constructor(message: string) {
         super(410, message)
     }
 }
 
-export class UnprocessableEntityError extends ResponseError {
+export class UnprocessableEntityException extends HttpException {
     constructor(message: string) {
         super(422, message)
     }
 }
 
-export class TooManyRequestsError extends ResponseError {
+export class TooManyRequestsException  extends HttpException {
     constructor(message: string) {
         super(429, message)
     }
 }
 
-export class InternalServerError extends ResponseError {
+export class InternalServerException  extends HttpException {
     constructor(message: string) {
         super(500, message)
     }
 }
 
-export class BadGatewayError extends ResponseError {
+export class BadGatewayException  extends HttpException {
     constructor(message: string) {
         super(502, message)
     }
 }
 
-export class ServiceUnavailableError extends ResponseError {
+export class ServiceUnavailableException  extends HttpException {
     constructor(message: string) {
         super(503, message)
     }

@@ -1,16 +1,14 @@
-import { prismaClientPg } from "../../infrastructure/database/postgres"
-import { IAuthRepository } from "./auth.repository.interface" 
+import { PrismaPgService } from "../../infrastructure/database/prisma-pg.service"
+import { IAuthRepository } from "./auth.Irepo" 
 import { RegisterUserDTO } from "./auth.dto"
 import { User } from "../../generated/prisma/client"
 
 export class PrismaAuthRepository implements IAuthRepository {
-  private prisma: typeof prismaClientPg
-  constructor(prisma: typeof prismaClientPg) {
-    this.prisma = prisma
-  }
+
+  constructor(private prismaPgService: PrismaPgService) {}
 
   async findById(id: string): Promise<Pick<User, 'id' | 'email'> | null> {
-    return this.prisma.user.findUnique({
+    return this.prismaPgService.client.user.findUnique({
       where: { 
         id: id
       },
@@ -22,7 +20,7 @@ export class PrismaAuthRepository implements IAuthRepository {
   }
   
   async findByEmail(email: string): Promise<Pick<User, 'id' | 'email'> | null> {
-    return this.prisma.user.findUnique({
+    return this.prismaPgService.client.user.findUnique({
         where: { 
             email: email 
         },
@@ -34,7 +32,7 @@ export class PrismaAuthRepository implements IAuthRepository {
   }
 
   async create(data: RegisterUserDTO): Promise<Pick<User, 'id' | 'email'>> {
-    return this.prisma.user.create({
+    return this.prismaPgService.client.user.create({
         data: data,
         select: {
           id: true,

@@ -8,34 +8,45 @@ import {
     hppMiddleware,
     xssProtection
 } from "../shared/middleware/security.middleware";
-import { requestLogger } from "../shared/middleware/logging.middleware";
-import { ErrorHandlerMiddleware } from "../shared/middleware/web-error-handler.middleware";
+import { createRequestLogger } from "../shared/middleware/logging.middleware";
 import router from "../shared/router";
+import { ErrorHandlerMiddleware } from "../shared/middleware/web-error-handler.middleware";
+import { winstonLogger } from "./logging/index.logging";
+
 const isProd = config.NODE_ENV === 'production'
 
 export const webApp = express();
 
 webApp.set('trust proxy', isProd ? 1 : false)
 
+// LOGGER REQUEST MIDDLEWARE
+webApp.use(createRequestLogger(winstonLogger))
+
+// HELMET
 webApp.use(helmetGuard)
 
+// CORS
 webApp.use(corsGuard)
 
-webApp.use(requestLogger) // OWASP
-
-webApp.use(express.json())
-webApp.use(express.urlencoded({ extended: true }))
-webApp.use(cookieParser())
-
-webApp.use(hppMiddleware)
-
-webApp.use(xssProtection)
-
+// STATIC FILES
 webApp.use(
   "/public",
   express.static(path.join(process.cwd(), "public"))
 )
 
+webApp.use(express.json())
+webApp.use(express.urlencoded({ extended: true }))
+webApp.use(cookieParser())
+
+// HPP
+webApp.use(hppMiddleware)
+
+// XSS
+webApp.use(xssProtection)
+
+
+// ROUTES
 webApp.use(router)
 
-webApp.use(ErrorHandlerMiddleware)
+// ERROR HANDLER
+webApp.use(ErrorHandlerMiddleware(winstonLogger))

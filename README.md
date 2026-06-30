@@ -1,6 +1,6 @@
 # Node.js TypeScript REST API Template
 
-Template backend REST API berbasis **Node.js + TypeScript** dengan **Layered Architecture Monolith** (Controller → Service → Repository → Database), siap untuk **development, testing, dan production** menggunakan **Docker**.
+Template backend REST API berbasis **Node.js + TypeScript** dengan **Hybrid Architecture Monolith** (Controller → Service → Repository → Database), siap untuk **development, testing, dan production** menggunakan **Docker**.
 
 ---
 
@@ -46,7 +46,7 @@ Template backend REST API berbasis **Node.js + TypeScript** dengan **Layered Arc
 
 ## Arsitektur
 
-Template ini menggunakan **Monolith Layered Architecture** dengan pola **Controller → Service → Repository**.
+Template ini menggunakan **Monolith Hybrid Architecture** dengan pola **Controller → Service → Repository → Database**.
 
 ```
 Request
@@ -95,25 +95,31 @@ Request
 │   │
 │   ├── infrastructure/
 │   │   ├── database/
-│   │   │   ├── postgres.ts  # Prisma client untuk PostgreSQL
-│   │   │   └── mysql.ts     # Prisma client untuk MySQL/MariaDB
-│   │   ├── logging.ts       # Winston logger instance
-│   │   ├── redis.ts         # Redis client instance
+│   │   │   ├── index.database.ts
+│   │   │   ├── prisma-pg.service.ts        # Prisma client untuk PostgreSQL
+│   │   │   └── prisma-mysql.service.ts     # Prisma client untuk MySQL/MariaDB
+│   │   ├── logging/
+│   │   │   ├── index.logging.ts            
+│   │   │   └── winston-logging.service.ts  # Winston logger instance
+│   │   ├── cache/
+│   │   │   ├── index.cache.ts            
+│   │   │   └── cache.repository.ts         # Repo cache (get, set, setNx, exists, dll)
+│   │   │   └── redis.ts                    # Redis instance
 │   │   └── server.ts        # Express app setup + middleware
 │   │
 │   ├── modules/
 │   │   └── auth/            # Contoh module (auth)
 │   │       ├── auth.controller.ts
 │   │       ├── auth.service.ts
-│   │       ├── auth.repository.interface.ts   # Interface
-│   │       ├── auth.prisma.ts                 # Implementasi repository
+│   │       ├── auth.Irepo.ts                  # Interface
+│   │       ├── auth.repo.ts                   # Implementasi repository
 │   │       ├── auth.dto.ts                    # Data Transfer Object
-│   │       ├── auth.response.ts               # Response transformer
 │   │       └── auth.routes.ts                 # Route definitions
+│   │       └── auth.validation.ts             # Zod schema validasi auth
 │   │
 │   ├── shared/
-│   │   ├── errors/
-│   │   │   └── service-response.error.ts
+│   │   ├── http/
+│   │   │   └── exception-response.http.ts
 │   │   ├── middleware/
 │   │   │   ├── logging.middleware.ts
 │   │   │   ├── security.middleware.ts
@@ -131,7 +137,6 @@ Request
 │   │   │   ├── logging.utils.ts     # Security logger
 │   │   │   └── paging.utils.ts      # Pagination builder
 │   │   └── validation/
-│   │       ├── auth.validation.ts   # Zod schema validasi auth
 │   │       └── validation.ts        # Wrapper Zod.parse
 │   │
 │   └── index.ts                     # Entry point
@@ -148,6 +153,7 @@ Request
 ├── Dockerfile                       # Multi-stage Dockerfile
 ├── package.json
 ├── prisma.config.ts                 # Prisma config
+├── redis.config.ts                  # Redis config (untuk penggunaan docker)
 └── tsconfig.json
 ```
 
@@ -660,9 +666,11 @@ DATABASE_URL="mysql://user:password@localhost:3306/database_name"
 
 ```typescript
 // Dari:
-import { prismaClientPg } from '../../infrastructure/database/postgres'
+import { prismaClientPg } from '../../infrastructure/database/prisma-pg.service'
 // Ke:
-import { prismaClientMysql } from '../../infrastructure/database/mysql'
+import { prismaClientMysql } from '../../infrastructure/database/prisma-mysql.service'
+
+dan ubah isi `/src/infrastructure/index.database`
 ```
 
 ### Prisma Commands Lengkap
@@ -698,7 +706,7 @@ Redis digunakan untuk:
 
 ### Konfigurasi Redis
 
-File konfigurasi ada di `src/config/redis.conf`. Beberapa setting penting:
+File konfigurasi ada di `/redis.conf`. Beberapa setting penting:
 
 ```conf
 bind 0.0.0.0          # Bind ke semua interface (docker)
@@ -730,6 +738,8 @@ queue:email
 
 Menggunakan **Winston** dengan format JSON.
 
+anda bisa mengatur preferensi logging di `/src/infrastructure/logging/winston-logging.service`
+
 ### Log Levels
 
 | Level | Kapan Digunakan |
@@ -737,40 +747,9 @@ Menggunakan **Winston** dengan format JSON.
 | `error` | Error yang tidak tertangani, 5xx |
 | `warn` | 4xx errors, rate limit, akses ditolak |
 | `info` | Request sukses, startup info |
-| `debug` | Query database, detail request (development only) |
+| `debug` | Query database, detail request (development only) | 
 
-### Security Logger
-
-File `src/shared/utils/logging/logging.utils.ts` menyediakan logger khusus untuk event keamanan:
-
-anda juga bisa menambahkan sendiri logging buatan anda sendiri
-
-```typescript
-import { securityLogger } from '../utils/logging.utils'
-
-// Login berhasil
-securityLogger.loginSuccess(userId, req.ip)
-
-// Login gagal
-securityLogger.loginFailed(email, req.ip, "Invalid password", requestId)
-
-// Akun dikunci
-securityLogger.accountLocked(email, req.ip, attemptCount)
-
-// Logout
-securityLogger.logout(userId, req.ip)
-
-// Akses ditolak
-securityLogger.accessDenied(userId, req.ip, req.url, "Token expired", requestId)
-
-// Rate limit
-securityLogger.rateLimitExceeded(req.ip, userId, req.url, requestId)
-
-// Token tidak valid
-securityLogger.invalidToken(req.ip, req.url, "Token expired", requestId)
-```
-
-> **Privacy:** Email di-hash (SHA-256) dan di-mask sebelum di-log untuk compliance (GDPR/PII).
+actifkan terlebih dahulu untuk `debug` di `/src/infrastructure/database/prisma-pg-service` jika menggunakan postgresql
 
 ### Log Output Format
 
@@ -802,7 +781,7 @@ Setiap error yang tertangani akan menghasilkan log dengan format berikut:
 }
 ```
 
-Field `origin` menunjukkan lokasi spesifik di kode kamu tempat error terjadi,
+Field `origin` menunjukkan lokasi spesifik di kode kamu tempat error terjadi, gunakan `/src/shared/utils/error.util` untuk mendapatkan origin,
 format: `ClassName.methodName (path/to/file.ts:line:col)`.
 Error middleware hanya menghasilkan **satu log entry per error** untuk menghindari duplicate log.
 
@@ -812,26 +791,26 @@ Error middleware hanya menghasilkan **satu log entry per error** untuk menghinda
 
 untuk error handling menggunakan pattern throw + middleware, serta bisa menggunakan Domain-specific error classes
 
-### ResponseError
+### HttpException
 
-Gunakan `ResponseError` untuk melempar error dari Service layer:
+Gunakan `HttpException` untuk melempar error dari Service layer:
 
 ```typescript
-import { ResponseError } from '../../shared/errors/service-response.error'
+import { HttpException } from '../../shared/http/exception-response.http'
 
 // Di dalam service
 if (existingUser) {
-    throw new ResponseError(403, "Email already exists")
+    throw new HttpException(403, "Email already exists")
 }
 
 if (!user) {
-    throw new ResponseError(404, "User not found")
+    throw new HttpException(404, "User not found")
 }
 ```
 
 Atau juga bisa menggunakan Domain-specific error classes:
 ```typescript
-import { ForbiddenError, NotFoundError } from "../../shared/errors/service-response.error"
+import { ForbiddenError, NotFoundError } from "../../shared/http/exception-response.http"
 
 // Di dalam service
 if (existingUser) {
@@ -884,8 +863,6 @@ export class AuthValidation {
             .min(8)
     })
 }
-// Export type dari schema
-export type RegisterRequest = z.infer<typeof AuthValidation.REGISTER_SCHEMA>;
 ```
 
 ### Cara Pakai di Service
@@ -894,8 +871,12 @@ export type RegisterRequest = z.infer<typeof AuthValidation.REGISTER_SCHEMA>;
 import { AuthValidation } from "./auth.validation"
 import { Validation } from "../../shared/validation/validation"
 
+constructor(
+    private validationService: ValidationService,
+) {}
+
 async createUser(req: CreateUserDTO) {
-    const validate = Validation.validate(AuthValidation.REGISTER_SCHEMA, req)
+    const validate = this.validationService.validate(AuthValidation.REGISTER_SCHEMA, req)
     // `validate` sudah type-safe dan tervalidasi
 }
 ```
@@ -912,10 +893,9 @@ Ikuti langkah berikut untuk menambah module baru, contoh module `Product`:
 src/modules/product/
 ├── product.controller.ts
 ├── product.service.ts
-├── product.repository.ts    ← interface
-├── product.prisma.ts        ← implementasi
+├── prisma-product.Irepo.ts    ← interface
+├── prisma-product.repo.ts     ← implementasi
 ├── product.dto.ts
-├── product.response.ts
 └── product.routes.ts
 └── product.validation.ts
 ```
@@ -963,10 +943,10 @@ export interface ProductRepository {
 ```typescript
 // product.prisma.ts
 export class PrismaProductRepository implements ProductRepository {
-    constructor(private prisma: typeof prismaClientPg) {}
+    constructor(private prismaPgService: PrismaPgService) {}
 
     async findById(id: string) {
-        return this.prisma.product.findUnique({ where: { id } })
+        return this.prismaPgService.client.user.findUnique({ where: { id } })
     }
     // ... implementasi lainnya
 }
@@ -977,7 +957,11 @@ export class PrismaProductRepository implements ProductRepository {
 ```typescript
 // product.service.ts
 export class ProductService {
-    constructor(private productRepo: ProductRepository) {}
+    constructor(
+        private productRepo: IProductRepository,
+        private validationService: ValidationService,
+        private logger: WinstonLoggerService,
+    ) {}
 
     async getAll(): Promise<Product[]> {
         return this.productRepo.findAll()
@@ -1010,9 +994,11 @@ export class ProductController {
 ```typescript
 // product.routes.ts
 const productRouter = Router()
-const repo = new PrismaProductRepository(prismaClientPg)
-const service = new ProductService(repo)
-const controller = new ProductController(service)
+
+const repo = new PrismaProductRepository(prismaPgService)
+const validationService = new ValidationService()
+const service = new ProductService(repo, validationService, winstonLogger)
+const controller = new ProductController(service, winstonLogger)
 
 productRouter.get('/', controller.getAll)
 export { productRouter }

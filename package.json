@@ -13,21 +13,27 @@
     "dev:docker:stop": "docker compose --env-file .env.development.docker -f docker-compose.dev.yml stop",
     "dev:docker:down": "docker compose --env-file .env.development.docker -f docker-compose.dev.yml down",
     "dev:docker:down:volume": "docker compose --env-file .env.development.docker -f docker-compose.dev.yml down -v",
+    
     "test": "dotenv -e .env.test.local -- cross-env NODE_ENV=test jest --runInBand",
     "test:docker:up": "docker compose --env-file .env.test.docker -f docker-compose.test.yml up --abort-on-container-exit",
     "test:docker:down:volume": "docker compose --env-file .env.test.docker -f docker-compose.test.yml down -v",
+    
     "build": "tsc",
     "start": "dotenv -e .env -- cross-env NODE_ENV=production node dist/index.ts",
+    
     "prisma:generate:dev": "dotenv -e .env.development.local -- prisma generate",
     "prisma:generate:dev:docker": "dotenv -e .env.development.docker -- prisma generate",
+    
     "prisma:migrate:dev": "dotenv -e .env.development.local -- prisma migrate dev",
     "prisma:migrate:dev:docker": "dotenv -e .env.development.docker -- prisma migrate dev",
     "prisma:migrate:test": "dotenv -e .env.test.local -- prisma migrate deploy",
     "prisma:migrate:prod": "dotenv -e .env -- prisma migrate deploy",
+    
     "prisma:seed:dev": "dotenv -e .env.development.local -- ts-node prisma/seeds/index.seeds.ts",
     "prisma:seed:dev:docker": "dotenv -e .env.development.docker -- ts-node prisma/seeds/index.seeds.ts",
     "prisma:seed:test": "dotenv -e .env.test.local -- ts-node prisma/seeds/index.seeds.ts",
     "prisma:seed:prod": "dotenv -e .env -- node dist/prisma/seeds/index.seeds.ts",
+    
     "prisma:studio:dev": "dotenv -e .env.development.local -- prisma studio",
     "prisma:studio:dev:docker": "dotenv -e .env.development.docker -- prisma studio",
     "prisma:studio:test": "dotenv -e .env.test -- prisma studio --port 5556"

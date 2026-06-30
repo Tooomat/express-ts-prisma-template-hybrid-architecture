@@ -1,13 +1,14 @@
 version: "3.9"
 
 volumes:
-  app-data-dev:
-  redis-data-dev:
-  postgres-data-dev:
+  xxx-app-data-dev:
+  xxx-redis-data-dev:
+  xxx-postgres-data-dev:
   
 services:
-  app:
-    container_name: app-dev
+  server:
+    container_name: server-${APP_NAME}-dev
+    image: xxxxxx:latest
     build:
       context: .
       target: dev
@@ -18,7 +19,7 @@ services:
       - "${APP_PORT}:${APP_PORT}"
     volumes:
       - .:/app
-      - app-data-dev:/app/node_modules
+      - xxx-app-data-dev:/app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -27,7 +28,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    container_name: postgres-dev
+    container_name: postgres-${APP_NAME}-dev
     image: postgres:16
     restart: always
     environment:
@@ -37,9 +38,10 @@ services:
     ports:
       - "${DB_PORT}:5432"
     volumes:
-      - postgres-data-dev:/var/lib/postgresql/data
+      - xxx-postgres-data-dev:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h localhost -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      # test: ["CMD-SHELL", "pg_isready -h localhost -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -47,11 +49,11 @@ services:
 
   redis:
     image: redis:8
-    container_name: redis-dev
+    container_name: redis-${APP_NAME}-dev
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:6379"
     volumes:
-      - redis-data-dev:/data
+      - xxx-redis-data-dev:/data
       - ./src/config/redis.conf:/usr/local/etc/redis/redis.conf
     command: redis-server /usr/local/etc/redis/redis.conf
     restart: unless-stopped

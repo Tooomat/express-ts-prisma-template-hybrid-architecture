@@ -1,36 +1,41 @@
 import { randomUUID } from "crypto";
 import { Request, Response, NextFunction } from "express";
-import { logger } from "../../infrastructure/logging";
+import { WinstonLoggerService } from "../../infrastructure/logging/winston-logging.service";
 
-export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
-    const start = Date.now()
-    const requestId = randomUUID()
+// Inject logger (lebih baik daripada import langsung)
+export const createRequestLogger = (logger: WinstonLoggerService) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now();
+    const requestId = randomUUID();
 
-    // Attach requestId ke request untuk di-trace
-    ;(req as any).requestId = requestId
+    // Attach requestId ke request object
+    (req as any).requestId = requestId;   // nanti bisa di-improve dengan declaration merging
 
-    res.on('finish', () => {
-        const duration = Date.now() - start
-        const logData = {
-            type: 'http:request',
-            requestId: requestId,
-            method: req.method,
-            url: req.originalUrl,
-            statusCode: res.statusCode,
-            duration: `${duration}ms`,
-            ip: req.ip,
-            userAgent: req.headers['user-agent'],
-            userId: (req as any).user?.id ?? 'anonymous'
-        }
+    res.on("finish", () => {
+      const duration = Date.now() - start;
 
-        if (res.statusCode >= 500) {
-            logger.error(logData)
-        } else if (res.statusCode >= 400) {
-            logger.warn(logData)
-        } else {
-            logger.info(logData)
-        }
-    })
+      const logData = {
+        type: "http:request",
+        requestId,
+        method: req.method,
+        url: req.originalUrl || req.url,
+        statusCode: res.statusCode,
+        duration: `${duration}ms`,
+        ip: req.ip || req.socket.remoteAddress,
+        userAgent: req.get("user-agent"),
+        userId: (req as any).user?.id ?? "anonymous",
+      };
 
-    next()
-}
+      // Log berdasarkan status code
+      if (res.statusCode >= 500) {
+        logger.error(logData);
+      } else if (res.statusCode >= 400) {
+        logger.warn(logData);
+      } else {
+        logger.info(logData);
+      }
+    });
+
+    next();
+  };
+};

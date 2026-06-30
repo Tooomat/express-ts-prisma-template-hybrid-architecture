@@ -18,6 +18,11 @@ dotenv.config({
 
 export interface EnvConfig {
   // # =====================
+  // # DOCKER
+  // # =====================
+  IS_DOCKER: boolean
+
+  // # =====================
   // # APP CONFIG
   // # =====================
   NODE_ENV: 'development' | 'production' | 'test'
@@ -107,6 +112,11 @@ function parseBoolean(value: string | undefined, defaultValue: boolean = false):
 
 export const config: EnvConfig = {
   // # =====================
+  // # DOCKER
+  // # =====================
+  IS_DOCKER: parseBoolean(process.env.IS_DOCKER),
+
+  // # =====================
   // # APP CONFIG
   // # =====================
   NODE_ENV: NODE_ENV as EnvConfig['NODE_ENV'],
@@ -118,7 +128,7 @@ export const config: EnvConfig = {
   // # FRONTEND CONFIG
   // # =====================
   FRONTEND_URL: required("FRONTEND_URL"),
-
+  
   // # =====================
   // # DATABASE
   // # =====================

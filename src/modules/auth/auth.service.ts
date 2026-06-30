@@ -1,32 +1,49 @@
-import { ResponseError } from "../../shared/errors/service-response.error"
+import { BadRequestException } from "../../shared/http/exception-response.http"
 import { AuthValidation } from "./auth.validation"
-import { Validation } from "../../shared/validation/validation"
-import { RegisterUserDTO } from "./auth.dto"
-import { IAuthRepository } from "./auth.repository.interface"
-import { 
-    AuthResponse, 
-    toAuthResponse 
-} from "./auth.response"
+import { ValidationService } from "../../shared/validation/validation.service"
+import { toAuthResponse, type RegisterUserDTO, type AuthResponse} from "./auth.dto"
+import { IAuthRepository } from "./auth.Irepo"
+
 import bcrypt from 'bcrypt'
+import { WinstonLoggerService } from "../../infrastructure/logging/winston-logging.service"
+import { errorUtils } from "../../shared/utils/error.utils"
 
 export class AuthService {
-    private authRepo: IAuthRepository
-    constructor(authRepo: IAuthRepository) {
-        this.authRepo = authRepo
-    }
+
+    constructor(
+        private authRepo: IAuthRepository,
+        private validationService: ValidationService,
+        private logger: WinstonLoggerService,
+    ) {}
     
-    async register(req: RegisterUserDTO): Promise<AuthResponse> {
-        const validate = Validation.validate(AuthValidation.REGISTER_SCHEMA, req)
+    async register(req: RegisterUserDTO, requestId: string): Promise<AuthResponse> {
+        const validate: RegisterUserDTO = this.validationService.validate(AuthValidation.REGISTER_SCHEMA, req)
         
         const existingUser = await this.authRepo.findByEmail(validate.email)
         if (existingUser) {
-            throw new ResponseError(403, "Email already exists")
+            this.logger.warn({
+                type: "auth:register:failed",
+                requestId,
+                reason: "email_already_exists",
+                origin: errorUtils.parseErrorOrigin(),
+                userId: "anonymous",
+                timestamp: new Date().toISOString()
+            })
+            throw new BadRequestException("Email already exists")
         }
 
         const hashedPassword = await bcrypt.hash(validate.password, 10)
+
         const user = await this.authRepo.create({
             email: validate.email,
-            password: hashedPassword // ← simpan yang sudah di-hash
+            password: hashedPassword 
+        })
+
+        this.logger.info({ 
+            type: "auth:register:success",
+            requestId,
+            userId: user.id,
+            timestamp: new Date().toISOString()
         })
 
         return toAuthResponse(user)

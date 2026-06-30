@@ -1,12 +1,13 @@
 version: "3.9"
 
 volumes:
-  postgres-data-prod:
-  redis-data-prod:
+  xxx-postgres-data:
+  xxx-redis-data:
   
 services:
-  app:
-    container_name: ${APP_NAME}-prod
+  server:
+    container_name: server-${APP_NAME}
+    image: xxxxxx:latest
     build:
       context: .
       target: prod
@@ -18,29 +19,33 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     restart: always
 
 # Kalau DB eksternal → hapus service postgres
   postgres:
-    container_name: postgres-prod
+    container_name: postgres-${APP_NAME}
     image: postgres:16
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     volumes:
-      - postgres-data-prod:/var/lib/postgresql/data
+      - xxx-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
+    container_name: redis-${APP_NAME}
     image: redis:8
-    container_name: redis-prod
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
     volumes:
-      - redis-data-prod:/data
-      - ./src/config/redis.conf:/usr/local/etc/redis/redis.conf
+      - xxx-redis-data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
     command: redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
